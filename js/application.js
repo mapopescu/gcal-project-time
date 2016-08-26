@@ -97,7 +97,7 @@ var modSecurity = {
 		return (gapi.auth.getToken() && !gapi.auth.getToken().error);
 	},
 	disconnect: function () {
-	  console.log('disconnect');
+	  //console.log('disconnect');
 		if (gpt.security.isConnected()) {
 			//google.accounts.user.logout();
 		}
@@ -125,18 +125,15 @@ var modPresentation = {
 			gpt.security.disconnect();
 			gpt.presentation.reset();
 		});
-		$("#linkPrevWeek").bind("click", function () {
-			gpt.presentation.showPreviousWeek();
-		});
-		$("#linkNextWeek").bind("click", function () {
-			gpt.presentation.showNextWeek();
-		});
 	},
 	reset: function() {
 		$("#btnConnect").show();
 		$("#btnDisconnect").hide();
 		$("#divDEMO").show();
 		$("#divDATA").hide();
+		$("#mainDiv").css('opacity', 0.5);
+		$("#linkPrevWeek").unbind('click');
+		$("#linkNextWeek").unbind('click');
 	},
 	afterAuth: function(authResult) {
 		//console.log('auth complete');
@@ -147,7 +144,14 @@ var modPresentation = {
 			$("#btnDisconnect").show();
 			$("#divDEMO").hide();
 			$("#divDATA").show();
+			$("#mainDiv").css('opacity', 1);
 			gpt.presentation.showCurrentWeek();
+			$("#linkPrevWeek").bind("click", function () {
+				gpt.presentation.showPreviousWeek();
+			});
+			$("#linkNextWeek").bind("click", function () {
+				gpt.presentation.showNextWeek();
+			});
 		} else {
 			console.log('auth error !!!');
 			gpt.presentation.reset();
