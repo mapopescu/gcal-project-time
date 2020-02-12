@@ -1,81 +1,127 @@
+/* jshint esversion: 8 */
+
+(function () {
 "use strict";
 
 /*
  * TODO
- * - !!! generic demo data
  * - !!! remove apiKey, clientId, e-mail before publishing code
  * - !!! fix: cancelled recurring event is showed when looking at the current week (and when previous to today!)
  * - refresh week button
- * - avoid jumps when going to prev/next week
- * - "empty" weekday - show day, 0h OR show holiday = 8h
- * - show "current" week and today
- * - select default calendar for authenticated user
- * - show authenticated user and selected calendar
+ * - show holiday = 8h
+ * - show "current" week and today or "Go to current week" button
  * - (later) allow choosing calendar
- * - (later) allow choosing/switching authenticated user
  */
 
 var gpt = null; //, google, $;
 
 var modConfiguration = {
-	VERSION: "2.0",
+	VERSION: "4.0",
 	clientId: "664723799635", //664723799635.apps.googleusercontent.com
 	apiKey: "AIzaSyCmg5qPKH4lGZeh6_5evtgaQ5Y7fc-IuVk",
 	appScope: "https://www.googleapis.com/auth/calendar.readonly",
-	me: "marius.popescu@pcpal.eu",
-	urlCalendarList: "https://www.googleapis.com/calendar/v3/users/me/calendarList",
+	//me: "",
+	urlCalendarList: "https://www.googleapis.com/calendar/v3/users/me/calendarList?",
 	//items[10].id = marius.popescu@pcpal.eu
-	urlEventList: "https://www.googleapis.com/calendar/v3/calendars/marius.popescu%40pcpal.eu/events?showDeleted=False&"
+	//urlEventList: ""
+	urlEventList: "https://www.googleapis.com/calendar/v3/calendars/",
+	urlQuery: "/events?showDeleted=False&"
+};
+
+var week = function () {
+	return {
+		sheets: [],
+		hours: function () {
+			var h = 0;
+			for (var i = 0; i < this.sheets.length; i++) {
+				h += this.sheets[i].hours();
+			}
+			return h;
+		}
+	}
+};
+
+var sheet = function (aDate) {
+	return {
+		sheetDate: aDate, 
+		projects: [],
+		hours: function () {
+			var h = 0;
+			for (var i = 0; i < this.projects.length; i++) {
+				h += this.projects[i].hours();
+			}
+			return h;
+		}
+	}
+};
+
+var project = function(projectName) {
+	return {
+		name: projectName, 
+		tasks: [],
+		summary: function () {
+			var d  = "", i;		
+			for (i = this.tasks.length - 1; i >= 0; i--) {
+				d += this.tasks[i].description + "<br/>";
+			}
+			return d;
+		},
+		is: function (aName) {
+			return this.name.toLowerCase() === aName.toLowerCase()
+		},
+		hours: function () {
+			var h  = 0, i;		
+			for (i = this.tasks.length - 1; i >= 0; i--) {
+				h += this.tasks[i].hours;
+			}
+			return h;
+		}
+	}
 };
 
 var modData = {
 	startDate: null, 
 	stopDate: null,
-	sheets: null,	
+	calendar: null,
 	init: function (aStartDate, aStopDate) {
 		var aDate = null;
 		modData.startDate = aStartDate;
 		modData.stopDate = aStopDate;
-		modData.sheets = [];
+		modData.week = new week();
 		for (aDate = modData.startDate; aDate < modData.stopDate; aDate = aDate.addDays(1)) {
-			modData.sheets.push({
-				sheetDate: aDate, 
-				projects: []
-			});
+			modData.week.sheets.push(new sheet(aDate));
 		}
 	},
 	sheetIndex: function (aDate) {
 		var i = 0;
-		for (i = 0; i < modData.sheets.length; i = i + 1) {
-			if (modData.sheets[i].sheetDate.sameDate(aDate)) { return i; }
+		for (i = 0; i < modData.week.sheets.length; i = i + 1) {
+			if (modData.week.sheets[i].sheetDate.sameDate(aDate)) { return i; }
 		}
 		return -1;
 	},
 	sheet: function (aDate) {
-		return modData.sheets[modData.sheetIndex(aDate)];
+		return modData.week.sheets[modData.sheetIndex(aDate)];
 	},
 	findProject: function (aDate, aProject) {
 		var i = 0, sheet = modData.sheet(aDate);
 		for (i = 0; i < sheet.projects.length; i = i + 1) {
-			if (sheet.projects[i].name.toLowerCase() === aProject.toLowerCase()) { return sheet.projects[i]; }
+			//if (sheet.projects[i].name.toLowerCase() === aProject.toLowerCase()) { return sheet.projects[i]; }
+			if (sheet.projects[i].is(aProject)) { return sheet.projects[i]; }
 		}
 		return null;
 	},
 	addProject: function (aDate, aProject) {
 		var sheet = modData.sheet(aDate);
-		sheet.projects.push({
-			name: aProject, 
-			tasks: []
-		});
+		sheet.projects.push(new project(aProject));
 		return modData.findProject(aDate, aProject);
 	},
 	addTask: function (task) {
 		//??? var sheet = modData.sheet(task.startDate);
 		//recurring events date is out of current modData period date range!!!
 		if (task.startDate >= modData.startDate && task.startDate <= modData.stopDate) {
-			var proj = modData.findProject(task.startDate, task.project);
+			var proj = modData.findProject(task.startDate, task.projectName);
 			if (proj === null) {
-				proj = modData.addProject(task.startDate, task.project);
+				proj = modData.addProject(task.startDate, task.projectName);
 			}
 			proj.tasks.push(task);
 		}
@@ -88,7 +134,8 @@ var modSecurity = {
 		gapi.client.setApiKey(gpt.configuration.apiKey);
 		gapi.auth.authorize({
 			'client_id': gpt.configuration.clientId,
-			'scope': gpt.configuration.appScope
+			'scope': gpt.configuration.appScope,
+			'cookie_policy': 'de-amicis.com'
 			//, immediate: true
 			}, aaa); //gpt.presentation.afterAuth);
 		return false;
@@ -97,9 +144,10 @@ var modSecurity = {
 		return (gapi.auth.getToken() && !gapi.auth.getToken().error);
 	},
 	disconnect: function () {
-	  //console.log('disconnect');
+	  	//console.log('disconnect');
 		if (gpt.security.isConnected()) {
-			//google.accounts.user.logout();
+			gapi.auth.setToken(null);
+			gapi.auth.signOut();
 		}
 	}
 };
@@ -127,30 +175,34 @@ var modPresentation = {
 		});
 	},
 	reset: function() {
-		$("#btnConnect").show();
-		$("#btnDisconnect").hide();
-		$("#divDEMO").show();
-		$("#divDATA").hide();
-		$("#mainDiv").css('opacity', 0.5);
+		$("#divDATA").html("");
+		$("#divDATA").removeClass('d-block').addClass('d-none'); //collapse('hide');
 		$("#linkPrevWeek").unbind('click');
 		$("#linkNextWeek").unbind('click');
+		$("#spanCrtWeek").html("");
+		$("#spanAccount").html("calendar@domain.com");
+		$("#navbarWeek").collapse('hide');
+		$("#btnConnect").removeClass('d-none').addClass('d-block'); //collapse('show');
+		$("#btnDisconnect").removeClass('d-block').addClass('d-none'); //collapse('hide');
 	},
 	afterAuth: function(authResult) {
-		//console.log('auth complete');
-		//console.log(gapi.auth.getToken());
-		//console.log(authResult);
 		if (gpt.security.isConnected()) {
-			$("#btnConnect").hide();
-			$("#btnDisconnect").show();
-			$("#divDEMO").hide();
-			$("#divDATA").show();
-			$("#mainDiv").css('opacity', 1);
-			gpt.presentation.showCurrentWeek();
-			$("#linkPrevWeek").bind("click", function () {
-				gpt.presentation.showPreviousWeek();
-			});
-			$("#linkNextWeek").bind("click", function () {
-				gpt.presentation.showNextWeek();
+			$("#btnConnect").removeClass('d-block').addClass('d-none'); //collapse('hide');
+			$("#btnDisconnect").removeClass('d-none').addClass('d-block'); //collapse('show');
+			var url = gpt.configuration.urlCalendarList + "access_token=" + gapi.auth.getToken().access_token;
+			$.getJSON(url, function(json) {
+				for(var i=0; i<json.items.length; i++) {
+					if (json.items[i].primary == true) gpt.data.calendar = json.items[i];
+				}
+			}).done(function (data) {
+				gpt.presentation.showCurrentWeek();
+				$("#linkPrevWeek").bind("click", function () {
+					gpt.presentation.showPreviousWeek();
+				});
+				$("#linkNextWeek").bind("click", function () {
+					gpt.presentation.showNextWeek();
+				});
+				$("#navbarWeek").collapse('show');
 			});
 		} else {
 			console.log('auth error !!!');
@@ -158,11 +210,12 @@ var modPresentation = {
 		}
 	},
 	getEvents: function(start, end) {
-		var url = gpt.configuration.urlEventList + "access_token=" + gapi.auth.getToken().access_token;
+		var url = gpt.configuration.urlEventList + 
+			gpt.data.calendar.id +
+			gpt.configuration.urlQuery + 
+			"access_token=" + gapi.auth.getToken().access_token;
 		url = url + "&timeMin=" + start.getISODateTime() + "&timeMax=" + end.getISODateTime();
-		console.log(url);
-		$.getJSON(url, function(json) {
-			console.log(json);
+		$.getJSON(encodeURI(url), function(json) {
 			gpt.data.init(start, end);
 			gpt.presentation.handleEvents(json);
 		});
@@ -177,7 +230,7 @@ var modPresentation = {
 			/*if (crtEvent.getEventStatus().value === "http://schemas.google.com/g/2005#event.canceled") { continue; }
 			if (crtEvent.getTimes()[0] === undefined || crtEvent.getTimes()[0] === null || crtEvent.getTimes()[0].getStartTime().dateOnly) { continue; }*/
 			
-			//skip full day events
+			//skip full-day events
 			if (!crtEvent.start || !crtEvent.start.dateTime || !crtEvent.end || !crtEvent.end.dateTime) { continue; }
 			//console.log(crtEvent);
 			
@@ -206,56 +259,51 @@ var modPresentation = {
 			eventTitle += " (" + aStartTime + " - " + aEndTime + " = " + aHoursDiff + " h)";
 			gpt.data.addTask({
 				startDate: crtDate, 
-				project: crtProject, 
+				projectName: crtProject, 
 				description: eventTitle, 
 				startTime: aStartTime, 
 				endTime: aEndTime, 
 				hours: aHoursDiff
 			});
 		}
-		gpt.presentation.showTimeSheets(gpt.data.sheets);
+		gpt.presentation.showWeek(gpt.data.week);
 	},
-	showTimeSheets: function (sheets) {
-		var weekHours = 0, s, p;
-		for (s = 0; s < gpt.data.sheets.length; s = s + 1) {
-			if (gpt.data.sheets[s].projects.length > 0) {
-				weekHours += gpt.presentation.addDate(gpt.data.sheets[s]);
-				for (p = 0; p < gpt.data.sheets[s].projects.length; p = p + 1) {
-					gpt.presentation.addProject(gpt.data.sheets[s].projects[p].name);
-					gpt.presentation.addProjectTasks(gpt.data.sheets[s].projects[p]);
-				}
+	showWeek: function (week) {
+		var t = '<table class="table table-hover table-responsive-sm">' +
+			'<thead class="table-default thead-info">' + 
+			'<tr class="table-primary">' +
+			'<th scope="col" class="font-weight-bold">Project</th>' +
+			'<th scope="col" class="font-weight-bold">Tasks</th>' +
+			'<th scope="col" class="font-weight-bold">Time</th>' +
+			'</tr>' +
+			'</thead>' +
+			'<tbody>';
+		
+		for (var i = 0; i < week.sheets.length; i++) {
+			var s = week.sheets[i];
+			t += '<tr class="table-secondary border-top">' +
+			  '<td scope="col">' + s.sheetDate.getMDayName() + '</th>' +
+			  '<td scope="col">' + s.sheetDate.getShortDateDDMM() + '</th>' +
+			  '<td scope="col" class="text-right">' + s.hours() + ' h' + '</td>' +
+			  '</tr>';
+			if (s.projects.length > 0) {
+				for (var p = 0; p < s.projects.length; p++) {
+					t += '<tr>' +
+					'<td scope="col">' + s.projects[p].name + '</th>' +
+					'<td scope="col">' + s.projects[p].summary() + '= ' + s.projects[p].hours() + ' h' + '</td>' + 
+					'<td scope="col" class="text-right">' + s.projects[p].hours() + ' h' + '</td>' +
+					'</tr>';
+					  }
 			}
 		}
-		$("#spanCrtWeekHours").html(weekHours + "h");
-		//((weekHours > 39) ? " label-warning" : "")
-		$("#divDATA").append('<p><br/><br/><br/><br/><br/></p>');
+		t += '<tbody>' +
+			'</table>';
+		$("#divDATA").html(t);
+		$("#divDATA").removeClass('d-none').addClass('d-block'); //collapse('show');
+		$("#spanWeek").html("Week&nbsp;" + gpt.presentation.currentDate.getISOWeek() + ",&nbsp;" + week.hours() + " h");
+		$("#spanAccount").html(gpt.data.calendar.id);
+		$("#spanWeekDetails").html(gpt.data.startDate.getShortDateDDMM() + ' to ' + gpt.data.stopDate.getShortDateDDMM() + '/' + gpt.presentation.currentDate.getISOYear());
 	},
-	addDate: function (crtSheet) {
-		var dayHours = 0, p, t;
-		for (p = 0; p < crtSheet.projects.length; p = p + 1) {
-			for (t = 0; t < crtSheet.projects[p].tasks.length; t = t + 1) {
-				dayHours += crtSheet.projects[p].tasks[t].hours;
-			}
-		}
-		//var warnHours = null;
-		//warnHours = ((dayHours > 8) ? " label-warning" : "");
-		$("#divDATA").append("<p><h2>" + crtSheet.sheetDate.getMDayName() + ", " + crtSheet.sheetDate.getShortDateDDMM() + " <span class='label" + ((dayHours > 8) ? " label-warning" : "") + "'>" + dayHours + "h</span>" + "</h2></p>");
-		return dayHours;
-	},
-	addProject: function (crtProject) {
-		$("#divDATA").append('<p><h4>' + crtProject + '</h4></p>');
-	},
-	addProjectTasks: function (crtProject) {
-		var hours = 0, i;		
-		for (i = crtProject.tasks.length - 1; i >= 0; i = i - 1) {
-			$("#divDATA").append("<div>" + crtProject.tasks[i].description + "</div>");
-			hours += crtProject.tasks[i].hours;
-		}
-		//add project hours
-		$("#divDATA").append("<div><span class='badge'>= " + hours + "h</span></div>");
-	},
-	
-	
 	
 	showCurrentWeek: function () {
 		var firstDate, lastDate;
@@ -263,13 +311,9 @@ var modPresentation = {
 		firstDate = gpt.presentation.currentDate.getFirstDayOfWeek(gpt.presentation.currentDate).clearTime();    
 		lastDate = firstDate.addDays(7).clearTime();
 		
-		$("#spanCrtWeek").html("Week " + gpt.presentation.currentDate.getISOWeek() + ", " + gpt.presentation.currentDate.getISOYear());
-		//$("#linkPrevWeek").html("&larr; Week " + (gpt.presentation.currentDate.getISOWeek() - 1));
-		//$("#linkNextWeek").html("Week " + (gpt.presentation.currentDate.getISOWeek() + 1) + " &rarr;");
-		$("#spanCrtWeekStart").html(firstDate.getShortDateDDMM());
-		$("#spanCrtWeekEnd").html(lastDate.getShortDateDDMM());
+		$("#spanCrtWeekStart").html(""); //firstDate.getShortDateDDMM());
+		$("#spanCrtWeekEnd").html(""); //lastDate.getShortDateDDMM());
 		$("#spanCrtWeekHours").html("");
-		$("#divDATA").html("");
 		
 		gpt.presentation.getEvents(firstDate, lastDate);
 	},	
@@ -297,7 +341,7 @@ var gpt = {
 		//gpt.presentation.doOnGetEvents = gpt.calendar.getEvents;
 		//gpt.calendar.doOnReset = gpt.presentation.reset;
 		//gpt.calendar.doOnHandleError = gpt.presentation.handleError;
-		//gpt.calendar.doAfterGetEvents = gpt.presentation.showTimeSheets;
+		//gpt.calendar.doAfterGetEvents = gpt.presentation.calculateWeekTime;
 		//gpt.calendar.init();
 	}
 };
@@ -305,3 +349,5 @@ var gpt = {
 $(document).ready(function() {
 	gpt.start();
 });
+
+}());
