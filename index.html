@@ -1,100 +1,70 @@
-<!DOCTYPE html>
-<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta charset="utf-8">
-    <title>GCal Project time v2</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="Marius Popescu">
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <link href="css/bootstrap.min.css" rel="stylesheet">
-	<link href="css/bootstrap-theme.min.css" rel="stylesheet">
-    <style>
-		body {
-			padding-top: 70px; /* to make the container go all the way to the bottom of the topbar */
-		}		
-    </style>
-    <!-- fav and touch icons -->
-    <!-- <link rel="shortcut icon" href="ico/favicon.ico"> -->
-    <!-- <link rel="apple-touch-icon-precomposed" sizes="114x114" href="ico/apple-touch-icon-114-precomposed.png">
-    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="ico/apple-touch-icon-72-precomposed.png">
-    <link rel="apple-touch-icon-precomposed" href="ico/apple-touch-icon-57-precomposed.png"> -->
-    <script src="https://apis.google.com/js/client.js?onload=load"></script>
-    <script src="js/jquery-3.1.0.min.js"></script>
-    <script src="js/dates.js"></script>
-    <script src="js/application.js"></script>
-  </head>
-  <body>
-	<nav class="navbar navbar-inverse navbar-fixed-top"> <!-- navbar-default -->
-	  <div class="container">
-		<div class="navbar-header">
-			<a class="navbar-brand" href="index.html#">GCal Project time v2</a>
-		</div>
-		<div class="collapse navbar-collapse">
-			<!-- <ul class="nav navbar-nav navbar-left"> -->
-			  <!--li class="active"><a href="index.html#home">Home</a></li-->
-			  <!--li><a href="index.html#about">About</a></li-->
-			  <!--li><a href="index.html#contact">Contact</a></li-->
-			  <!-- <li class="active"><a href="index.html#demo">Demo</a></li> -->
-			<!-- </ul> -->
-			<ul class="nav navbar-nav navbar-right">
-			  <li><button type="button" class="btn btn-default navbar-btn" id="btnConnect">Connect</button></li>
-			  <li><button type="button" class="btn btn-default navbar-btn" id="btnDisconnect">Disconnect</button></li>
-			</ul>
-		</div>
-	  </div>
-	</nav>
-    <div class="container" id="mainDiv">
-      <h1>
-        <span id="spanCrtWeek">Week 24, 2012</span> <span class="label" id="spanCrtWeekHours">16h</span>
-        <button type="button" class="btn btn-default" id="linkPrevWeek" title="Previous week">&larr;</button>
-		<button type="button" class="btn btn-default" id="linkNextWeek" title="Next week">&rarr;</button>
-      </h1>
-      <h4><span id="spanCrtWeekStart">11/06</span> - <span id="spanCrtWeekEnd">18/06</span></h4>
-      
-      <div id="divDEMO">
-        <p>
-          <h2>Monday, 11/06 <span class="label label-warning">8.5h</span></h2>
-          <p>
-            <h4>Project 1</h4>
-            <div>development (14:30 - 15:30 = 1 h)</div>
-            <div>development (16:30 - 17:30 = 1 h)</div>
-            <div><span class="badge">= 2h</span></div>
-          </p>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>GCAL Project time</title>
+  <meta name="description" content="Calculate how much time you spend on each project, daily and weekly, using Google Calendar">
+  <meta name="author" content="Marius Popescu (De Amicis)">
+
+  <!-- Bootstrap CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-theme.min.css" rel="stylesheet">
   
-          <p>
-            <h4>Project 2</h4>
-            <div>a meeting (9:30 - 12:30 = 4 h)</div>
-            <div>b meeting (13:30 - 14:30 = 1 h)</div>
-            <div>development (15:30 - 16:30 = 1 h)</div>
-            <div>development (17:30 - 18:00 = 0.5 h)</div>
-            <div><span class="badge">= 6.5h</span></div>
-          </p>
-        </p>
+  <!-- fav and touch icons -->
+  <!-- <link rel="shortcut icon" href="ico/favicon.ico"> -->
+  <!-- <link rel="apple-touch-icon-precomposed" sizes="114x114" href="ico/apple-touch-icon-114-precomposed.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="ico/apple-touch-icon-72-precomposed.png">
+  <link rel="apple-touch-icon-precomposed" href="ico/apple-touch-icon-57-precomposed.png"> -->
+</head>
+<body class="bg-dark">
+  <nav id="navbarMain" class="navbar navbar-dark bg-primary">
+    <a class="navbar-brand h1" href="#">GCAL Project time</a>
+    <ul class="nav">
+        <li class="nav-item mr-2">
+            <span class="navbar-text text-white" id="spanAccount">calendar@domain.com</span>
+          </li>
+        <li class="nav-item">
+          <button type="button" class="btn btn-outline-light d-block" id="btnConnect">Connect</button>
+        </li>
+      <li class="nav-item">
+          <button type="button" class="btn btn-outline-light d-none" id="btnDisconnect">Disconnect</button>
+      </li>
+    </ul>
+  </nav>
+  <nav id="navbarWeek" class="navbar navbar-light bg-light border-dark border-bottom sticky-top collapse">
+      <span id="spanWeek" class="h4"></span>
+      <ul class="nav">
+          <li class="nav-item mr-2">
+              <span class="navbar-text" id="spanWeekDetails"></span>
+            </li>
+          <li class="nav-item">
+            <button type="button" class="btn btn-outline-dark" id="linkPrevWeek" title="Previous week">&larr;</button>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="btn btn-outline-dark" id="linkNextWeek" title="Next week">&rarr;</button>
+          </li>
+      </ul>
+      </nav>
   
-        <p>
-          <h2>Tuesday, 12/06 <span class="label">7.5h</span></h2>
-          <p>
-            <h4>Project 1</h4>
-            <div>a meeting (9:30 - 10:30 = 1 h)</div>
-            <div><span class="badge">= 1h</span></div>
-          </p>
+  <div class="justify-content-md-center m-4 border border-dark bg-light d-none" id="divDATA">
+  </div>
   
-          <p>
-            <h4>Project 2</h4>
-            <div>development (10:30 - 12:30 = 2 h)</div>
-            <div>development (13:30 - 18:00 = 4.5 h)</div>
-            <div><span class="badge">= 6.5h</span></div>
-          </p>
-        </p>
-      </div>
-    
-      <div id="divDATA">    
-      </div>
-    </div> <!-- /container -->
-  
+  <div></div>
+
   <noscript>This application only works when you allow Javascript scripts in your browser. Thank you.</noscript>
-    <!-- javascript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-	<script src="js/bootstrap.min.js"></script>
-</body></html>
+  <!-- javascript
+  ================================================== -->
+  <!-- Placed at the end of the document so the pages load faster -->
+  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+  <script src="js/jquery-3.3.1.min.js"></script>
+  <script src="js/popper.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="https://apis.google.com/js/client.js?onload=load"></script>
+  <script src="js/dates.js"></script>
+  <script src="js/application.js"></script>
+</body>
+</html>
