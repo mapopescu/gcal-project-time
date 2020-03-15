@@ -13,9 +13,9 @@
  * - (later) allow choosing calendar
  */
 
-var gpt = null; //, google, $;
+let gpt = null; //, google, $;
 
-var modConfiguration = {
+let modConfiguration = {
 	VERSION: "4.0",
 	clientId: "664723799635", //664723799635.apps.googleusercontent.com
 	apiKey: "AIzaSyCmg5qPKH4lGZeh6_5evtgaQ5Y7fc-IuVk",
@@ -28,63 +28,63 @@ var modConfiguration = {
 	urlQuery: "/events?showDeleted=False&"
 };
 
-var week = function () {
+let week = function () {
 	return {
 		sheets: [],
 		hours: function () {
-			var h = 0;
-			for (var i = 0; i < this.sheets.length; i++) {
+			let h = 0;
+			for (let i = 0; i < this.sheets.length; i++) {
 				h += this.sheets[i].hours();
 			}
 			return h;
 		}
-	}
+	};
 };
 
-var sheet = function (aDate) {
+let sheet = function (aDate) {
 	return {
 		sheetDate: aDate, 
 		projects: [],
 		hours: function () {
-			var h = 0;
-			for (var i = 0; i < this.projects.length; i++) {
+			let h = 0;
+			for (let i = 0; i < this.projects.length; i++) {
 				h += this.projects[i].hours();
 			}
 			return h;
 		}
-	}
+	};
 };
 
-var project = function(projectName) {
+let project = function(projectName) {
 	return {
 		name: projectName, 
 		tasks: [],
 		summary: function () {
-			var d  = "", i;		
+			let d  = "", i;		
 			for (i = this.tasks.length - 1; i >= 0; i--) {
 				d += this.tasks[i].description + "<br/>";
 			}
 			return d;
 		},
 		is: function (aName) {
-			return this.name.toLowerCase() === aName.toLowerCase()
+			return this.name.toLowerCase() === aName.toLowerCase();
 		},
 		hours: function () {
-			var h  = 0, i;		
+			let h  = 0, i;		
 			for (i = this.tasks.length - 1; i >= 0; i--) {
 				h += this.tasks[i].hours;
 			}
 			return h;
 		}
-	}
+	};
 };
 
-var modData = {
+let modData = {
 	startDate: null, 
 	stopDate: null,
 	calendar: null,
 	init: function (aStartDate, aStopDate) {
-		var aDate = null;
+		let aDate = null;
 		modData.startDate = aStartDate;
 		modData.stopDate = aStopDate;
 		modData.week = new week();
@@ -93,8 +93,7 @@ var modData = {
 		}
 	},
 	sheetIndex: function (aDate) {
-		var i = 0;
-		for (i = 0; i < modData.week.sheets.length; i = i + 1) {
+		for (let i = 0; i < modData.week.sheets.length; i = i + 1) {
 			if (modData.week.sheets[i].sheetDate.sameDate(aDate)) { return i; }
 		}
 		return -1;
@@ -103,23 +102,23 @@ var modData = {
 		return modData.week.sheets[modData.sheetIndex(aDate)];
 	},
 	findProject: function (aDate, aProject) {
-		var i = 0, sheet = modData.sheet(aDate);
-		for (i = 0; i < sheet.projects.length; i = i + 1) {
+		let sheet = modData.sheet(aDate);
+		for (let i = 0; i < sheet.projects.length; i = i + 1) {
 			//if (sheet.projects[i].name.toLowerCase() === aProject.toLowerCase()) { return sheet.projects[i]; }
 			if (sheet.projects[i].is(aProject)) { return sheet.projects[i]; }
 		}
 		return null;
 	},
 	addProject: function (aDate, aProject) {
-		var sheet = modData.sheet(aDate);
+		let sheet = modData.sheet(aDate);
 		sheet.projects.push(new project(aProject));
 		return modData.findProject(aDate, aProject);
 	},
 	addTask: function (task) {
-		//??? var sheet = modData.sheet(task.startDate);
+		//??? let sheet = modData.sheet(task.startDate);
 		//recurring events date is out of current modData period date range!!!
 		if (task.startDate >= modData.startDate && task.startDate <= modData.stopDate) {
-			var proj = modData.findProject(task.startDate, task.projectName);
+			let proj = modData.findProject(task.startDate, task.projectName);
 			if (proj === null) {
 				proj = modData.addProject(task.startDate, task.projectName);
 			}
@@ -128,7 +127,7 @@ var modData = {
 	}	
 };
 
-var modSecurity = {
+let modSecurity = {
 	connect: function (aaa) {
 		gpt.security.disconnect();
 		gapi.client.setApiKey(gpt.configuration.apiKey);
@@ -152,7 +151,7 @@ var modSecurity = {
 	}
 };
 
-/*var modPresentation = {
+/*let modPresentation = {
 	handleError: function (e) {
 		if (e instanceof Error) {
 			// Alert with the error line number, file and message.
@@ -164,7 +163,7 @@ var modSecurity = {
 };
 */
 
-var modPresentation = {
+let modPresentation = {
 	bindEvents: function () {
 		$("#btnConnect").bind("click", function () {
 			gpt.security.connect(gpt.presentation.afterAuth);
@@ -189,9 +188,9 @@ var modPresentation = {
 		if (gpt.security.isConnected()) {
 			$("#btnConnect").removeClass('d-block').addClass('d-none'); //collapse('hide');
 			$("#btnDisconnect").removeClass('d-none').addClass('d-block'); //collapse('show');
-			var url = gpt.configuration.urlCalendarList + "access_token=" + gapi.auth.getToken().access_token;
+			let url = gpt.configuration.urlCalendarList + "access_token=" + gapi.auth.getToken().access_token;
 			$.getJSON(url, function(json) {
-				for(var i=0; i<json.items.length; i++) {
+				for(let i=0; i<json.items.length; i++) {
 					if (json.items[i].primary == true) gpt.data.calendar = json.items[i];
 				}
 			}).done(function (data) {
@@ -210,7 +209,7 @@ var modPresentation = {
 		}
 	},
 	getEvents: function(start, end) {
-		var url = gpt.configuration.urlEventList + 
+		let url = gpt.configuration.urlEventList + 
 			gpt.data.calendar.id +
 			gpt.configuration.urlQuery + 
 			"access_token=" + gapi.auth.getToken().access_token;
@@ -222,7 +221,7 @@ var modPresentation = {
 	},
 	
 	handleEvents: function (eventList) {
-		var crtDate = null, crtProject = null, i = 0,
+		let crtDate = null, crtProject = null, i = 0,
 			crtEvent, aStartDate, aStartTime, aEndDate, aEndTime, eventTitle, aHoursDiff;
 		for (i = 0; i < eventList.items.length; i = i + 1) {
 			crtEvent = eventList.items[i];
@@ -244,7 +243,7 @@ var modPresentation = {
 				crtDate = aStartDate;
 			}
 			if (crtProject === null || crtProject !== crtEvent.summary.split(" ")[0]) {
-				var s = crtEvent.summary.split("-");
+				let s = crtEvent.summary.split("-");
 				if (s.length === 1) {
 					s = crtEvent.summary.split(" ");
 				}
@@ -269,7 +268,7 @@ var modPresentation = {
 		gpt.presentation.showWeek(gpt.data.week);
 	},
 	showWeek: function (week) {
-		var t = '<table class="table table-hover table-responsive-sm">' +
+		let t = '<table class="table table-hover table-responsive-sm">' +
 			'<thead class="table-default thead-info">' + 
 			'<tr class="table-primary">' +
 			'<th scope="col" class="font-weight-bold">Project</th>' +
@@ -279,15 +278,15 @@ var modPresentation = {
 			'</thead>' +
 			'<tbody>';
 		
-		for (var i = 0; i < week.sheets.length; i++) {
-			var s = week.sheets[i];
+		for (let i = 0; i < week.sheets.length; i++) {
+			let s = week.sheets[i];
 			t += '<tr class="table-secondary border-top">' +
 			  '<td scope="col">' + s.sheetDate.getMDayName() + '</th>' +
 			  '<td scope="col">' + s.sheetDate.getShortDateDDMM() + '</th>' +
 			  '<td scope="col" class="text-right">' + s.hours() + ' h' + '</td>' +
 			  '</tr>';
 			if (s.projects.length > 0) {
-				for (var p = 0; p < s.projects.length; p++) {
+				for (let p = 0; p < s.projects.length; p++) {
 					t += '<tr>' +
 					'<td scope="col">' + s.projects[p].name + '</th>' +
 					'<td scope="col">' + s.projects[p].summary() + '= ' + s.projects[p].hours() + ' h' + '</td>' + 
@@ -306,7 +305,7 @@ var modPresentation = {
 	},
 	
 	showCurrentWeek: function () {
-		var firstDate, lastDate;
+		let firstDate, lastDate;
 		if (gpt.presentation.currentDate === undefined) { this.currentDate = new Date(); }
 		firstDate = gpt.presentation.currentDate.getFirstDayOfWeek(gpt.presentation.currentDate).clearTime();    
 		lastDate = firstDate.addDays(7).clearTime();
@@ -325,9 +324,9 @@ var modPresentation = {
 		gpt.presentation.currentDate = gpt.presentation.currentDate.addDays(7);
 		gpt.presentation.showCurrentWeek();
 	}
-}
+};
 
-var gpt = {
+gpt = {
 	//attach modules
 	presentation: modPresentation,
 	configuration: modConfiguration,
