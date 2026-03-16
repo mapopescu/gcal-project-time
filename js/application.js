@@ -242,10 +242,12 @@ let modPresentation = {
 				crtProject = null;
 				crtDate = aStartDate;
 			}
-			if (crtProject === null || crtProject !== crtEvent.summary.split(" ")[0]) {
-				let s = crtEvent.summary.split("-");
+			
+			let summary = crtEvent.summary || "";
+			if (crtProject === null || crtProject !== summary.split(" ")[0]) {
+				let s = summary.split("-");
 				if (s.length === 1) {
-					s = crtEvent.summary.split(" ");
+					s = summary.split(" ");
 				}
 				crtProject = s[0];
 			}
@@ -254,7 +256,7 @@ let modPresentation = {
 			aEndTime = aEndDate.toTime();
 			aHoursDiff = aEndDate.hoursDiff(aStartDate);
 			//remove "[ProjectName] - " prefix. to improve !!!
-			eventTitle = crtEvent.summary.substr(crtProject.length + 1);
+			eventTitle = summary.substr(crtProject.length + 1);
 			eventTitle += " (" + aStartTime + " - " + aEndTime + " = " + aHoursDiff + " h)";
 			gpt.data.addTask({
 				startDate: crtDate, 
