@@ -223,21 +223,24 @@ let modPresentation = {
 	handleEvents: function (eventList) {
 		let crtDate = null, crtProject = null, i = 0,
 			crtEvent, aStartDate, aStartTime, aEndDate, aEndTime, eventTitle, aHoursDiff;
-		for (i = 0; i < eventList.items.length; i = i + 1) {
+		for (let i = 0; i < eventList.items.length; i++) {
 			crtEvent = eventList.items[i];
-			// filter out deleted events !!!
-			/*if (crtEvent.getEventStatus().value === "http://schemas.google.com/g/2005#event.canceled") { continue; }
-			if (crtEvent.getTimes()[0] === undefined || crtEvent.getTimes()[0] === null || crtEvent.getTimes()[0].getStartTime().dateOnly) { continue; }*/
-			
-			//skip full-day events
-			if (!crtEvent.start || !crtEvent.start.dateTime || !crtEvent.end || !crtEvent.end.dateTime || !crtEvent.summary) { continue; }
-			//console.log(crtEvent);
+			// filter out deleted events in URL params
+			//https://www.googleapis.com/calendar/v3/calendars/<>/events?showDeleted=False&access_token=<>&timeMin=2025-11-24T00:00:00.000Z&timeMax=2025-12-01T00:00:00.000Z
+
+			//skip full-day events, empty summary events, declined events
+			let declined_or_not_confirmed = false;
+			if (crtEvent.attendees) {
+				for (const att of crtEvent.attendees) {
+					declined_or_not_confirmed = att.self && (att.responseStatus === "declined" || att.responseStatus === "needsAction");
+					if (declined_or_not_confirmed) break;
+				}
+			}
+			if (!crtEvent.start || !crtEvent.start.dateTime || !crtEvent.end || !crtEvent.end.dateTime || !crtEvent.summary || declined_or_not_confirmed) continue;
 			
 			aStartDate = new Date(Date.parse(crtEvent.start.dateTime));
 			aEndDate = new Date(Date.parse(crtEvent.end.dateTime));
-			//console.log(aStartDate);
-			//console.log(aEndDate);
-			
+		
 			if (crtDate === null || crtDate.getDate() !== aStartDate) {
 				crtProject = null;
 				crtDate = aStartDate;
@@ -250,13 +253,14 @@ let modPresentation = {
 					s = summary.split(" ");
 				}
 				crtProject = s[0];
+				eventTitle = (s.length > 1) ? eventTitle = s[1] : "";
 			}
 			
 			aStartTime = aStartDate.toTime();
 			aEndTime = aEndDate.toTime();
 			aHoursDiff = aEndDate.hoursDiff(aStartDate);
 			//remove "[ProjectName] - " prefix. to improve !!!
-			eventTitle = summary.substr(crtProject.length + 1);
+			//eventTitle = summary.substr(crtProject.length + 1);
 			eventTitle += " (" + aStartTime + " - " + aEndTime + " = " + aHoursDiff + " h)";
 			gpt.data.addTask({
 				startDate: crtDate, 
