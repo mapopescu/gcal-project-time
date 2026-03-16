@@ -230,7 +230,7 @@ let modPresentation = {
 			if (crtEvent.getTimes()[0] === undefined || crtEvent.getTimes()[0] === null || crtEvent.getTimes()[0].getStartTime().dateOnly) { continue; }*/
 			
 			//skip full-day events
-			if (!crtEvent.start || !crtEvent.start.dateTime || !crtEvent.end || !crtEvent.end.dateTime) { continue; }
+			if (!crtEvent.start || !crtEvent.start.dateTime || !crtEvent.end || !crtEvent.end.dateTime || !crtEvent.summary) { continue; }
 			//console.log(crtEvent);
 			
 			aStartDate = new Date(Date.parse(crtEvent.start.dateTime));
@@ -260,8 +260,8 @@ let modPresentation = {
 			eventTitle += " (" + aStartTime + " - " + aEndTime + " = " + aHoursDiff + " h)";
 			gpt.data.addTask({
 				startDate: crtDate, 
-				projectName: crtProject, 
-				description: eventTitle, 
+				projectName: crtProject.trim(), 
+				description: eventTitle.trim(), 
 				startTime: aStartTime, 
 				endTime: aEndTime, 
 				hours: aHoursDiff
